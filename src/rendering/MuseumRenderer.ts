@@ -61,7 +61,7 @@ export class MuseumRenderer {
     this.heatmapTexture.minFilter = THREE.LinearFilter
 
     this.setupLights()
-    this.buildLayout(simulator.layout)
+    this.rebuildLayout(simulator)
     this.buildHeatmap(simulator)
 
     window.addEventListener('resize', this.onResize)
@@ -94,6 +94,15 @@ export class MuseumRenderer {
       spot.position.set(15 + i * 12, 8, 8 + (i % 3) * 12)
       this.scene.add(spot)
     }
+  }
+
+  rebuildLayout(sim: MuseumSimulator) {
+    const layout = sim.layout
+    this.layoutGroup.clear()
+    this.exhibitLabels.clear()
+    this.buildLayout(layout)
+    this.heatmapGroup.clear()
+    this.buildHeatmap(sim)
   }
 
   private buildLayout(layout: Layout) {
@@ -131,14 +140,34 @@ export class MuseumRenderer {
     this.layoutGroup.add(gridHelper)
 
     for (const wall of layout.walls) {
-      this.addWall(wall)
+      this.addWall(wall, layout)
+    }
+
+    for (const dw of layout.doorways) {
+      if (dw.enabled) {
+        const wall = layout.walls.find(w => w.id === dw.wallId)
+        let normal = { x: 0, z: 1 }
+        if (wall) {
+          const dx = wall.end.x - wall.start.x
+          const dz = wall.end.z - wall.start.z
+          const len = Math.sqrt(dx * dx + dz * dz) || 1
+          normal = { x: dz / len, z: -dx / len }
+        }
+        this.addDoorwayIndicator({ ...dw, position: dw.center, normal })
+      }
     }
 
     for (const sc of layout.showcases) {
-      this.addShowcase(sc)
+      if (sc.enabled) {
+        this.addShowcase(sc)
+      }
     }
 
     for (const ex of layout.exhibits) {
+      if (ex.showcaseId) {
+        const sc = layout.showcases.find(s => s.id === ex.showcaseId)
+        if (sc && !sc.enabled) continue
+      }
       this.addExhibit(ex)
     }
 
@@ -150,7 +179,7 @@ export class MuseumRenderer {
     }
   }
 
-  private addWall(wall: Wall) {
+  private addWall(wall: Wall, layout: Layout) {
     const dx = wall.end.x - wall.start.x
     const dz = wall.end.z - wall.start.z
     const len = Math.sqrt(dx * dx + dz * dz)
@@ -179,6 +208,66 @@ export class MuseumRenderer {
     top.position.set(cx, wall.height - 0.05, cz)
     top.rotation.y = -angle
     this.layoutGroup.add(top)
+  }
+
+  private addDoorwayIndicator(dw: { position: { x: number; z: number }; width: number; normal: { x: number; z: number }; name?: string }) {
+    const group = new THREE.Group()
+    const len = dw.width
+    const perpX = -dw.normal.z
+    const perpZ = dw.normal.x
+    const cx = dw.position.x
+    const cz = dw.position.z
+
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(len * 0.9, 0.03, 1.2),
+      new THREE.MeshStandardMaterial({
+        color: 0x90ee90,
+        emissive: 0x448844,
+        emissiveIntensity: 0.35,
+        transparent: true,
+        opacity: 0.85
+      })
+    )
+    floor.position.set(cx, 0.02, cz)
+    const ang = Math.atan2(perpZ, perpX)
+    floor.rotation.y = -ang
+    this.layoutGroup.add(floor)
+
+    const leftPost = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.08, 2.4, 8),
+      new THREE.MeshStandardMaterial({ color: 0x90ee90, emissive: 0x44aa44, emissiveIntensity: 0.4 })
+    )
+    leftPost.position.set(cx + perpX * len * 0.45, 1.2, cz + perpZ * len * 0.45)
+    this.layoutGroup.add(leftPost)
+
+    const rightPost = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.08, 2.4, 8),
+      new THREE.MeshStandardMaterial({ color: 0x90ee90, emissive: 0x44aa44, emissiveIntensity: 0.4 })
+    )
+    rightPost.position.set(cx - perpX * len * 0.45, 1.2, cz - perpZ * len * 0.45)
+    this.layoutGroup.add(rightPost)
+
+    if (dw.name) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 160
+      canvas.height = 28
+      const c = canvas.getContext('2d')!
+      c.fillStyle = 'rgba(20,60,30,0.9)'
+      c.fillRect(0, 0, 160, 28)
+      c.fillStyle = '#90ee90'
+      c.font = 'bold 14px "PingFang SC", sans-serif'
+      c.textAlign = 'center'
+      c.textBaseline = 'middle'
+      c.fillText(dw.name, 80, 14)
+      const tex = new THREE.CanvasTexture(canvas)
+      const lbl = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 0.42),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+      )
+      lbl.position.set(cx, 2.7, cz)
+      lbl.rotation.y = -ang
+      this.layoutGroup.add(lbl)
+    }
   }
 
   private addShowcase(sc: Showcase) {

@@ -26,7 +26,7 @@ export function buildGrid(layout: Layout): Grid {
     for (let gx = 0; gx < width; gx++) {
       const wx = expandedMinX + (gx + 0.5) * CELL_SIZE
       const wz = expandedMinZ + (gy + 0.5) * CELL_SIZE
-      const blocked = isPointBlocked(layout, { x: wx, z: wz }, 0.25)
+      const blocked = isPointBlocked(layout, { x: wx, z: wz }, 0.36)
       walkable[gy * width + gx] = blocked ? 0 : 1
     }
   }

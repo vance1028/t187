@@ -34,17 +34,28 @@ export function getHallIdAtPoint(layout: Layout, point: Vec2): string | null {
 
 export function isBlockedByWall(layout: Layout, point: Vec2, radius: number = 0.3): boolean {
   for (const wall of layout.walls) {
-    let hasDoorway = false
+    let hasEnabledDoorway = false
     for (const d of layout.doorways) {
+      if (!d.enabled) continue
       if (d.wallId === wall.id) {
-        const dist = pointToLineDistance(point.x, point.z, d.center.x - d.width / 2, d.center.z, d.center.x + d.width / 2, d.center.z)
+        const dx = wall.end.x - wall.start.x
+        const dz = wall.end.z - wall.start.z
+        const len = Math.sqrt(dx * dx + dz * dz) || 1
+        const tx = dx / len
+        const tz = dz / len
+        const half = d.width / 2
+        const x1 = d.center.x - tx * half
+        const z1 = d.center.z - tz * half
+        const x2 = d.center.x + tx * half
+        const z2 = d.center.z + tz * half
+        const dist = pointToLineDistance(point.x, point.z, x1, z1, x2, z2)
         if (dist < radius + WALL_THICKNESS / 2) {
-          hasDoorway = true
+          hasEnabledDoorway = true
           break
         }
       }
     }
-    if (hasDoorway) continue
+    if (hasEnabledDoorway) continue
     const d = pointToLineDistance(point.x, point.z, wall.start.x, wall.start.z, wall.end.x, wall.end.z)
     if (d < radius + WALL_THICKNESS / 2) return true
   }
@@ -53,6 +64,7 @@ export function isBlockedByWall(layout: Layout, point: Vec2, radius: number = 0.
 
 export function isBlockedByShowcase(layout: Layout, point: Vec2, radius: number = 0.3): boolean {
   for (const sc of layout.showcases) {
+    if (!sc.enabled) continue
     const cos = Math.cos(-sc.rotation)
     const sin = Math.sin(-sc.rotation)
     const dx = point.x - sc.position.x
@@ -115,64 +127,52 @@ function createWalls(): Wall[] {
   const t = WALL_THICKNESS
   return [
     { id: 'w1', start: { x: 0, z: 0 }, end: { x: 55, z: 0 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w2', start: { x: 55, z: 0 }, end: { x: 55, z: 10 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w3', start: { x: 55, z: 30 }, end: { x: 55, z: 45 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w2', start: { x: 55, z: 0 }, end: { x: 55, z: 45 }, height: WALL_HEIGHT, thickness: t },
     { id: 'w4', start: { x: 55, z: 45 }, end: { x: 0, z: 45 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w5', start: { x: 0, z: 45 }, end: { x: 0, z: 20 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w6', start: { x: 0, z: 20 }, end: { x: 0, z: 0 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w5', start: { x: 0, z: 45 }, end: { x: 0, z: 0 }, height: WALL_HEIGHT, thickness: t },
 
-    { id: 'w7', start: { x: 25, z: 0 }, end: { x: 25, z: 6 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w8', start: { x: 25, z: 14 }, end: { x: 25, z: 20 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w_vert_a', start: { x: 25, z: 0 }, end: { x: 25, z: 20 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w_horiz_a', start: { x: 0, z: 20 }, end: { x: 25, z: 20 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w_vert_b', start: { x: 25, z: 20 }, end: { x: 25, z: 45 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w_horiz_b', start: { x: 25, z: 34 }, end: { x: 55, z: 34 }, height: WALL_HEIGHT, thickness: t },
 
-    { id: 'w9', start: { x: 0, z: 20 }, end: { x: 8, z: 20 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w10', start: { x: 16, z: 20 }, end: { x: 25, z: 20 }, height: WALL_HEIGHT, thickness: t },
-
-    { id: 'w11', start: { x: 25, z: 26 }, end: { x: 25, z: 45 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w12', start: { x: 25, z: 20 }, end: { x: 25, z: 26 }, height: WALL_HEIGHT, thickness: t },
-
-    { id: 'w13', start: { x: 25, z: 34 }, end: { x: 35, z: 34 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w14', start: { x: 45, z: 34 }, end: { x: 55, z: 34 }, height: WALL_HEIGHT, thickness: t },
-
-    { id: 'w15', start: { x: 75, z: 10 }, end: { x: 75, z: 30 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w16', start: { x: 55, z: 10 }, end: { x: 75, z: 10 }, height: WALL_HEIGHT, thickness: t },
-    { id: 'w17', start: { x: 55, z: 30 }, end: { x: 75, z: 30 }, height: WALL_HEIGHT, thickness: t }
+    { id: 'w_exit_r', start: { x: 75, z: 10 }, end: { x: 75, z: 30 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w_exit_t', start: { x: 55, z: 10 }, end: { x: 75, z: 10 }, height: WALL_HEIGHT, thickness: t },
+    { id: 'w_exit_b', start: { x: 55, z: 30 }, end: { x: 75, z: 30 }, height: WALL_HEIGHT, thickness: t }
   ]
 }
 
 function createDoorways(): Doorway[] {
   return [
-    { id: 'd1', center: { x: 12.5, z: 0 }, width: 4, wallId: 'w1' },
-    { id: 'd2', center: { x: 25, z: 10 }, width: 4, wallId: 'w7' },
-    { id: 'd3', center: { x: 12, z: 20 }, width: 4, wallId: 'w9' },
-    { id: 'd4', center: { x: 25, z: 23 }, width: 3, wallId: 'w12' },
-    { id: 'd5', center: { x: 40, z: 34 }, width: 4, wallId: 'w13' },
-    { id: 'd6', center: { x: 55, z: 20 }, width: 4, wallId: 'w3' }
+    { id: 'd1', name: '大门入口', center: { x: 12.5, z: 0 }, width: 4, wallId: 'w1', enabled: true },
+    { id: 'd2', name: '大厅→古代馆', center: { x: 25, z: 10 }, width: 4, wallId: 'w_vert_a', enabled: true },
+    { id: 'd3', name: '大厅→现代馆', center: { x: 12, z: 20 }, width: 4, wallId: 'w_horiz_a', enabled: true },
+    { id: 'd4', name: '现代馆→珍宝馆', center: { x: 25, z: 23 }, width: 3, wallId: 'w_vert_b', enabled: true },
+    { id: 'd5', name: '古代馆→珍宝馆', center: { x: 40, z: 34 }, width: 4, wallId: 'w_horiz_b', enabled: true },
+    { id: 'd6', name: '珍宝馆→出口', center: { x: 55, z: 20 }, width: 4, wallId: 'w2', enabled: true }
   ]
 }
 
 function createShowcases(): Showcase[] {
   return [
-    { id: 'sc1', position: { x: 8, z: 8 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc2', position: { x: 8, z: 14 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc3', position: { x: 17, z: 5 }, width: 1.2, depth: 3, rotation: 0 },
-
-    { id: 'sc4', position: { x: 32, z: 5 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc5', position: { x: 42, z: 5 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc6', position: { x: 48, z: 12 }, width: 1.2, depth: 3, rotation: 0 },
-    { id: 'sc7', position: { x: 35, z: 15 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc8', position: { x: 46, z: 17 }, width: 2.5, depth: 1.2, rotation: 0 },
-
-    { id: 'sc9', position: { x: 6, z: 27 }, width: 1.2, depth: 3, rotation: 0 },
-    { id: 'sc10', position: { x: 6, z: 37 }, width: 1.2, depth: 3, rotation: 0 },
-    { id: 'sc11', position: { x: 14, z: 30 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc12', position: { x: 14, z: 39 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc13', position: { x: 20, z: 25 }, width: 2, depth: 1.2, rotation: 0 },
-
-    { id: 'sc14', position: { x: 33, z: 27 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc15', position: { x: 47, z: 27 }, width: 3, depth: 1.2, rotation: 0 },
-    { id: 'sc16', position: { x: 40, z: 40 }, width: 3.5, depth: 1.8, rotation: 0 },
-    { id: 'sc17', position: { x: 30, z: 30 }, width: 1.5, depth: 1.5, rotation: 0 },
-    { id: 'sc18', position: { x: 50, z: 40 }, width: 1.2, depth: 2, rotation: 0 }
+    { id: 'sc1', name: '鼎柜1', position: { x: 8, z: 8 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc2', name: '壁柜2', position: { x: 8, z: 14 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc3', name: '俑柜3', position: { x: 17, z: 5 }, width: 1.2, depth: 3, rotation: 0, enabled: true },
+    { id: 'sc4', name: '钟柜4', position: { x: 32, z: 5 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc5', name: '璧柜5', position: { x: 42, z: 5 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc6', name: '简柜6', position: { x: 48, z: 12 }, width: 1.2, depth: 3, rotation: 0, enabled: true },
+    { id: 'sc7', name: '衣柜7', position: { x: 35, z: 15 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc8', name: '柜8', position: { x: 46, z: 17 }, width: 2.5, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc9', name: '画柜9', position: { x: 6, z: 27 }, width: 1.2, depth: 3, rotation: 0, enabled: true },
+    { id: 'sc10', name: '塑柜10', position: { x: 6, z: 37 }, width: 1.2, depth: 3, rotation: 0, enabled: true },
+    { id: 'sc11', name: '装置柜11', position: { x: 14, z: 30 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc12', name: '影柜12', position: { x: 14, z: 39 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc13', name: '数艺柜13', position: { x: 20, z: 25 }, width: 2, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc14', name: '宝石柜14', position: { x: 33, z: 27 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc15', name: '面具柜15', position: { x: 47, z: 27 }, width: 3, depth: 1.2, rotation: 0, enabled: true },
+    { id: 'sc16', name: '九龙鼎柜16', position: { x: 40, z: 40 }, width: 3.5, depth: 1.8, rotation: 0, enabled: true },
+    { id: 'sc17', name: '杯柜17', position: { x: 30, z: 30 }, width: 1.5, depth: 1.5, rotation: 0, enabled: true },
+    { id: 'sc18', name: '瓷柜18', position: { x: 50, z: 40 }, width: 1.2, depth: 2, rotation: 0, enabled: true }
   ]
 }
 
@@ -229,3 +229,119 @@ export function createDefaultLayout(): Layout {
 }
 
 export { rectContains, pointToLineDistance }
+
+import type { ProfileDistribution, VisitorProfile, VisitorProfileId } from './types'
+import { VisitorProfileId as VP } from './types'
+
+export const VISITOR_PROFILES: Record<VisitorProfileId, VisitorProfile> = {
+  [VP.TOURIST]: {
+    id: VP.TOURIST,
+    name: '观光游客',
+    color: '#4ade80',
+    keyExhibitWeight: 0.85,
+    stayTimeMultiplier: 1.0,
+    speedMultiplier: 1.0,
+    visitCountMin: 6,
+    visitCountMax: 12
+  },
+  [VP.SCHOLAR]: {
+    id: VP.SCHOLAR,
+    name: '研究学者',
+    color: '#60a5fa',
+    keyExhibitWeight: 0.6,
+    stayTimeMultiplier: 2.0,
+    speedMultiplier: 0.75,
+    visitCountMin: 4,
+    visitCountMax: 8
+  },
+  [VP.CASUAL]: {
+    id: VP.CASUAL,
+    name: '休闲访客',
+    color: '#f472b6',
+    keyExhibitWeight: 0.4,
+    stayTimeMultiplier: 0.7,
+    speedMultiplier: 1.1,
+    visitCountMin: 3,
+    visitCountMax: 7
+  },
+  [VP.STUDENT]: {
+    id: VP.STUDENT,
+    name: '学生团体',
+    color: '#fbbf24',
+    keyExhibitWeight: 0.75,
+    stayTimeMultiplier: 0.85,
+    speedMultiplier: 1.25,
+    visitCountMin: 8,
+    visitCountMax: 14
+  },
+  [VP.VIP]: {
+    id: VP.VIP,
+    name: '贵宾参观',
+    color: '#a78bfa',
+    keyExhibitWeight: 0.95,
+    stayTimeMultiplier: 1.4,
+    speedMultiplier: 0.85,
+    visitCountMin: 5,
+    visitCountMax: 9
+  }
+}
+
+export const DEFAULT_PROFILE_DISTRIBUTION: ProfileDistribution = {
+  tourist: 0.45,
+  scholar: 0.1,
+  casual: 0.25,
+  student: 0.15,
+  vip: 0.05
+}
+
+export function pickProfile(rng: { next: () => number }, dist: ProfileDistribution): VisitorProfileId {
+  const total = dist.tourist + dist.scholar + dist.casual + dist.student + dist.vip
+  let r = rng.next() * Math.max(0.0001, total)
+  r -= dist.tourist
+  if (r <= 0) return VP.TOURIST
+  r -= dist.scholar
+  if (r <= 0) return VP.SCHOLAR
+  r -= dist.casual
+  if (r <= 0) return VP.CASUAL
+  r -= dist.student
+  if (r <= 0) return VP.STUDENT
+  return VP.VIP
+}
+
+export function setDoorwayEnabled(layout: Layout, doorwayId: string, enabled: boolean): boolean {
+  const d = layout.doorways.find(x => x.id === doorwayId)
+  if (!d) return false
+  d.enabled = enabled
+  return true
+}
+
+export function moveShowcase(layout: Layout, showcaseId: string, dx: number, dz: number): boolean {
+  const sc = layout.showcases.find(x => x.id === showcaseId)
+  if (!sc) return false
+  sc.position.x = Math.max(layout.worldBounds.minX + 2, Math.min(layout.worldBounds.maxX - 2, sc.position.x + dx))
+  sc.position.z = Math.max(layout.worldBounds.minZ + 2, Math.min(layout.worldBounds.maxZ - 2, sc.position.z + dz))
+  const ex = layout.exhibits.find(e => e.showcaseId === showcaseId)
+  if (ex) {
+    ex.position.x = sc.position.x
+    ex.position.z = sc.position.z
+  }
+  return true
+}
+
+export function setShowcaseEnabled(layout: Layout, showcaseId: string, enabled: boolean): boolean {
+  const sc = layout.showcases.find(x => x.id === showcaseId)
+  if (!sc) return false
+  sc.enabled = enabled
+  return true
+}
+
+export function normalizeProfileDistribution(dist: ProfileDistribution): ProfileDistribution {
+  const total = Math.max(0.0001, dist.tourist + dist.scholar + dist.casual + dist.student + dist.vip)
+  return {
+    tourist: dist.tourist / total,
+    scholar: dist.scholar / total,
+    casual: dist.casual / total,
+    student: dist.student / total,
+    vip: dist.vip / total
+  }
+}

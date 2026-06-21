@@ -26,17 +26,21 @@ export interface Wall {
 
 export interface Doorway {
   id: string
+  name: string
   center: Vec2
   width: number
   wallId: string
+  enabled: boolean
 }
 
 export interface Showcase {
   id: string
+  name: string
   position: Vec2
   width: number
   depth: number
   rotation: number
+  enabled: boolean
 }
 
 export interface Exhibit {
@@ -92,11 +96,39 @@ export enum AgentState {
   STUCK = 'stuck'
 }
 
+export enum VisitorProfileId {
+  TOURIST = 'tourist',
+  SCHOLAR = 'scholar',
+  CASUAL = 'casual',
+  STUDENT = 'student',
+  VIP = 'vip'
+}
+
+export interface VisitorProfile {
+  id: VisitorProfileId
+  name: string
+  color: string
+  keyExhibitWeight: number
+  stayTimeMultiplier: number
+  speedMultiplier: number
+  visitCountMin: number
+  visitCountMax: number
+}
+
+export interface ProfileDistribution {
+  tourist: number
+  scholar: number
+  casual: number
+  student: number
+  vip: number
+}
+
 export interface AgentPreferences {
   keyExhibitWeight: number
   stayTimeMultiplier: number
   speedMultiplier: number
   visitCount: number
+  profile: VisitorProfileId
 }
 
 export interface Agent {
@@ -120,6 +152,7 @@ export interface Agent {
   createdAt: number
   exitAt: number | null
   queuePosition: number
+  queueStartedAt: number | null
 }
 
 export interface HeatmapCell {
@@ -144,6 +177,22 @@ export interface SimulationParams {
   avgSpeed: number
   seed: number
   heatmapDecay: number
+  profileDistribution: ProfileDistribution
+}
+
+export interface ExhibitQueueRecord {
+  agentId: number
+  joinedAt: number
+  position: number
+}
+
+export interface ExhibitQueue {
+  exhibitId: string
+  viewing: number[]
+  waiting: ExhibitQueueRecord[]
+  maxViewing: number
+  totalWaitTimes: number[]
+  servedCount: number
 }
 
 export interface HallStats {

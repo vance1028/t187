@@ -1,4 +1,5 @@
-import type { SimulationParams, SimulationStats } from '../simulation/types'
+import type { SimulationParams, SimulationStats, ProfileDistribution, VisitorProfileId } from '../simulation/types'
+import { VISITOR_PROFILES } from '../simulation/layout'
 
 interface Props {
   params: SimulationParams
@@ -126,6 +127,61 @@ export function ControlPanel({ params, stats, onParamsChange, onReset, onPauseTo
 
       <div style={{ fontSize: 11, color: '#7a7a9a', marginTop: 4, lineHeight: 1.5 }}>
         提示：「重跑」同种子完全复现；「新种子」换一套不同结果。
+      </div>
+
+      <div className="section-title" style={{ marginTop: 14 }}>观众画像分布（比例）</div>
+      <div className="profile-legend" style={{ marginBottom: 4 }}>
+        {Object.values(VISITOR_PROFILES).map(p => (
+          <span key={p.id} className="profile-legend-item">
+            <span className="profile-dot" style={{ background: p.color }} />
+            {p.name}
+          </span>
+        ))}
+      </div>
+      {Object.values(VISITOR_PROFILES).map(p => (
+        <div key={p.id} className="control-row" style={{ marginBottom: 4 }}>
+          <label style={{ fontSize: 12 }}>
+            <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 50, background: p.color, marginRight: 6 }} />
+            {p.name}
+            <span>{(params.profileDistribution[p.id] * 100).toFixed(0)}%</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={params.profileDistribution[p.id]}
+            onChange={e => {
+              const val = parseFloat(e.target.value)
+              const next: ProfileDistribution = { ...params.profileDistribution }
+              next[p.id as VisitorProfileId] = val
+              const others = Object.keys(next).filter(k => k !== p.id) as VisitorProfileId[]
+              const sumOthers = others.reduce((s, k) => s + next[k], 0)
+              const targetSum = Math.max(0.0001, 1 - val)
+              if (sumOthers > 0) {
+                for (const k of others) {
+                  next[k] = (next[k] / sumOthers) * targetSum
+                }
+              } else {
+                const eq = targetSum / others.length
+                for (const k of others) next[k] = eq
+              }
+              onParamsChange({ profileDistribution: next })
+            }}
+          />
+        </div>
+      ))}
+      <div className="profile-bar">
+        {Object.values(VISITOR_PROFILES).map(p => (
+          <div
+            key={p.id}
+            className="profile-bar-seg"
+            style={{
+              background: p.color,
+              flexGrow: Math.max(0.01, params.profileDistribution[p.id])
+            }}
+          />
+        ))}
       </div>
     </div>
   )

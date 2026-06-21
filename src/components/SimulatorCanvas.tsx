@@ -5,13 +5,20 @@ import type { MuseumSimulator } from '../simulation/simulator'
 interface Props {
   simulator: MuseumSimulator | null
   onRendererReady?: (r: MuseumRenderer) => void
+  layoutVersion?: number
 }
 
-export function SimulatorCanvas({ simulator, onRendererReady }: Props) {
+export function SimulatorCanvas({ simulator, onRendererReady, layoutVersion }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<MuseumRenderer | null>(null)
   const rafRef = useRef<number>(0)
   const lastTimeRef = useRef<number>(performance.now())
+
+  useEffect(() => {
+    if (rendererRef.current && simulator) {
+      rendererRef.current.rebuildLayout(simulator)
+    }
+  }, [layoutVersion, simulator])
 
   useEffect(() => {
     if (!containerRef.current || !simulator) return
